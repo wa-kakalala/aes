@@ -1,8 +1,17 @@
-#include "KeyExpansion.h"
+/**************************************
+@ filename    : key.c
+@ author      : yyrwkk
+@ create time : 2024/02/03 23:38:12
+@ version     : v1.0.0
+**************************************/
+#include "key.h"
 
 RoundKey_s roundKeyor;
 RoundKey_s roundKeyor_last;
 
+/**
+* @ bref: KeyExpansion sbox
+*/
 static const unsigned char sbox[256] = {
   //0    1     2      3     4    5     6     7      8    9     A      B    C     D     E     F
   0x63, 0x7c, 0x77, 0x7b, 0xf2, 0x6b, 0x6f, 0xc5, 0x30, 0x01, 0x67, 0x2b, 0xfe, 0xd7, 0xab, 0x76,
@@ -23,12 +32,20 @@ static const unsigned char sbox[256] = {
   0x8c, 0xa1, 0x89, 0x0d, 0xbf, 0xe6, 0x42, 0x68, 0x41, 0x99, 0x2d, 0x0f, 0xb0, 0x54, 0xbb, 0x16 
 };
 
+/**
+* @ bref: const value
+* the full form is : 0x8d000000, 0x01000000 ...
+* in xor calc, the value ^ 0x00 = value, so skip 0x00
+* the format of 128 bit, just use Rcon[1] ~ Rcon[11], the Rcon[0] is not in use
+*/
 static const unsigned char Rcon[11] = {
   0x8d, 0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x1b, 0x36 
 };
+
 /*
-* rounds 0 is reserved, which is for init key in logic
-* rounds : 1-10
+* @ bref: calc roundkey
+* @ param roundKeyor_last: the roundkey of last round
+* @ param rounds : 1-10 , rounds 0 is reserved, which is for init key in logic
 */
 RoundKey_s * KeyExpansion(RoundKey_s * roundKeyor_last,int rounds){
     if( rounds < 1 || rounds > 10) {
@@ -39,80 +56,112 @@ RoundKey_s * KeyExpansion(RoundKey_s * roundKeyor_last,int rounds){
         printf("the input roundKeyor_last is NULL!\r\n");
         return NULL;
     }
-    // calc roundKey_0
-    char roundkey_0_3 = roundKeyor_last->roundkey_0[3];
-    roundKeyor_last->roundkey_3[1] = roundKeyor_last->roundkey_0[2];
-    roundKeyor_last->roundkey_3[2] = roundKeyor_last->roundkey_0[3];
-    roundKeyor_last->roundkey_3[3] = roundKeyor_last->roundkey_0[0];
-    roundKeyor_last->roundkey_3[0] = roundkey_0_3;
 
-    for( char idx = 0;idx < 4;idx++){
-        roundKeyor_last->roundkey_3[idx] = sbox[roundKeyor_last->roundkey_3[idx]];
+    unsigned char roundkey_last_3 [4] = {0};
+
+    // calc roundKey_0
+    roundkey_last_3[0] = roundKeyor_last->roundkey_3[1];
+    roundkey_last_3[1] = roundKeyor_last->roundkey_3[2];
+    roundkey_last_3[2] = roundKeyor_last->roundkey_3[3];
+    roundkey_last_3[3] = roundKeyor_last->roundkey_3[0];
+
+    for( unsigned char idx = 0;idx < 4;idx++){
+        roundkey_last_3[idx] = sbox[roundkey_last_3[idx]];
     }
     // just roundkey_0[0] need to xor with Rcon, because other is xor with 0x00
-    roundKeyor_last->roundkey_3[0] ^= Rcon[rounds];
-    for( char idx = 0;idx < 4;idx++){
+    roundkey_last_3[0] ^= Rcon[rounds];
+    for( unsigned char idx = 0;idx < 4;idx++){
         roundKeyor.roundkey_0[idx] = roundKeyor_last->roundkey_0[idx] ^ 
-                                     roundKeyor_last->roundkey_3[idx];
+                                     roundkey_last_3[idx];
     }
 
     // calc roundKey_1
-    for( char idx = 1;idx<4;idx++){
+    for( unsigned char idx = 0;idx<4;idx++){
         roundKeyor.roundkey_1[idx] = roundKeyor_last->roundkey_1[idx] ^ 
                                      roundKeyor.roundkey_0[idx];
     }
 
     // calc roundKey_2
-    for( char idx = 1;idx<4;idx++){
+    for( unsigned char idx = 0;idx<4;idx++){
         roundKeyor.roundkey_2[idx] = roundKeyor_last->roundkey_2[idx] ^ 
                                      roundKeyor.roundkey_1[idx];
     }
 
     // calc roundKey_3
-    for( char idx = 1;idx<4;idx++){
+    for( unsigned char idx = 0;idx<4;idx++){
         roundKeyor.roundkey_3[idx] = roundKeyor_last->roundkey_3[idx] ^ 
                                      roundKeyor.roundkey_2[idx];
     }
+
     return &roundKeyor;
 }
 
+/**
+* @ bref: Update global variable roundKeyor_last
+*/
 RoundKey_s * UpdateLastRoundKey(RoundKey_s * roundKeyor){
     if( roundKeyor == NULL ) {
         printf("the input roundKeyor is NULL!\r\n");
         return NULL;
     }
     // get roundKey_0
-    for( char idx = 0;idx<4;idx++){
+    for( unsigned char idx = 0;idx<4;idx++){
        roundKeyor_last.roundkey_0[idx] = roundKeyor->roundkey_0[idx];
     }
 
     // get roundKey_1
-    for( char idx = 0;idx<4;idx++){
+    for( unsigned char idx = 0;idx<4;idx++){
        roundKeyor_last.roundkey_1[idx] = roundKeyor->roundkey_1[idx];
     }
 
     // get roundKey_2
-    for( char idx = 0;idx<4;idx++){
+    for( unsigned char idx = 0;idx<4;idx++){
        roundKeyor_last.roundkey_2[idx] = roundKeyor->roundkey_2[idx];
     }
 
     // get roundKey_3
-    for( char idx = 0;idx<4;idx++){
+    for( unsigned char idx = 0;idx<4;idx++){
        roundKeyor_last.roundkey_3[idx] = roundKeyor->roundkey_3[idx];
     }
 
     return &roundKeyor_last;
 }
 
+/**
+* @ bref: get original roundKey from 128 bit key
+*/
 RoundKey_s * GetOriginRoundKey(unsigned char * key){
     if( key == NULL ) {
         printf("the input key is NULL!\r\n");
         return NULL;
     }
+    unsigned char key_idx = 0;
+     // get roundKey_0
+    for( unsigned char idx = 0;idx<4;idx++){
+       roundKeyor_last.roundkey_0[idx] = key[key_idx++];
+    }
+
+    // get roundKey_1
+    for( unsigned char idx = 0;idx<4;idx++){
+       roundKeyor_last.roundkey_1[idx] = key[key_idx++];
+    }
+
+    // get roundKey_2
+    for( unsigned char idx = 0;idx<4;idx++){
+       roundKeyor_last.roundkey_2[idx] = key[key_idx++];
+    }
+
+    // get roundKey_3
+    for( unsigned char idx = 0;idx<4;idx++){
+       roundKeyor_last.roundkey_3[idx] = key[key_idx++];
+    }
 
     return &roundKeyor_last; 
 }
 
+/**
+* @ bref: display the value of roundkey variable in hex
+*/
 void PrintRoundKey(RoundKey_s * roundKeyor){
     if( roundKeyor == NULL ) {
         printf("the input roundKeyor is NULL!\r\n");
@@ -121,25 +170,25 @@ void PrintRoundKey(RoundKey_s * roundKeyor){
 
     printf("--------------------------------------\r\n");
     // print roundKey_0
-    for( char idx = 0;idx<4;idx++){
+    for( unsigned char idx = 0;idx<4;idx++){
         printf("%x ",roundKeyor->roundkey_0[idx]);
     }
     printf("\r\n");
 
     // print roundKey_1
-    for( char idx = 0;idx<4;idx++){
+    for( unsigned char idx = 0;idx<4;idx++){
        printf("%x ",roundKeyor->roundkey_1[idx]);
     }
     printf("\r\n");
 
     // print roundKey_2
-    for( char idx = 0;idx<4;idx++){
+    for( unsigned char idx = 0;idx<4;idx++){
        printf("%x ",roundKeyor->roundkey_2[idx]);
     }
     printf("\r\n");
 
     // print roundKey_3
-    for( char idx = 0;idx<4;idx++){
+    for( unsigned char idx = 0;idx<4;idx++){
        printf("%x ",roundKeyor->roundkey_3[idx]);
     }
     printf("\r\n");
