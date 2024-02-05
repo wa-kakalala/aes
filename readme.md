@@ -2,7 +2,9 @@
 
 advanced encryption standard
 
-## 1. 密钥扩展
+![image-20240205173340373](pic/image-20240205173340373.png)
+
+## 一、密钥扩展
 
 ![image-20240204003753304](pic/image-20240204003753304.png)
 
@@ -25,3 +27,10 @@ RoundKey_s * GetOriginRoundKey(unsigned char * key);
 void         PrintRoundKey(RoundKey_s * roundKeyor);
 ```
 
+## 二、字节代换
+
+![image-20240205160711429](pic/image-20240205160711429.png)
+
+## 三、行移位
+
+![image-20240205163447772](pic/image-20240205163447772.png)

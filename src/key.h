@@ -16,6 +16,7 @@ typedef struct RoundKey_s {
     unsigned char roundkey_3[4];
 }RoundKey_s;
 
+extern const unsigned char sbox[256];
 RoundKey_s * KeyExpansion(RoundKey_s * roundKeyor_last,int rounds);
 RoundKey_s * UpdateLastRoundKey(RoundKey_s * roundKeyor);
 RoundKey_s * GetOriginRoundKey(unsigned char * key);

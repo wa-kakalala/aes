@@ -8,5 +8,7 @@
 #define _AES_H_
 #include "key.h"
 
-
+unsigned char * SubBytes(unsigned char * data);
+unsigned char * AddRoundKey(unsigned char * data, RoundKey_s* roundKey)
+unsigned char * ShiftRows(unsigned char * data);
 #endif
