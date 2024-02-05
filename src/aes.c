@@ -54,5 +54,6 @@ unsigned char * ShiftRows(unsigned char * data){
 
 unsigned char * MixColumns(unsigned char * data){
    
+   return data;
 }
 
